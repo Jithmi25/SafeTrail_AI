@@ -1,15 +1,20 @@
-import { Button, Input, Spinner } from "@/components/ui";
+import { Button, Spinner } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 import {
-  ArrowRight,
-  Bell,
-  Languages,
-  Lock,
-  Mail,
-  MapPin,
-  Shield,
-  Sparkles,
-  User as UserIcon,
+    IS_SUPABASE_CONFIGURED,
+    SUPABASE_MISSING_MESSAGE,
+} from "@/lib/supabase";
+import {
+    ArrowRight,
+    Bell,
+    Languages,
+    Lock,
+    Mail,
+    MapPin,
+    Shield,
+    Sparkles,
+    User as UserIcon,
+    type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -42,6 +47,10 @@ export function AuthScreen() {
   }
 
   async function handleGoogle() {
+    if (!IS_SUPABASE_CONFIGURED) {
+      setError(SUPABASE_MISSING_MESSAGE);
+      return;
+    }
     setError(null);
     setBusy(true);
     const { error } = await signInWithGoogle();
@@ -102,6 +111,7 @@ export function AuthScreen() {
           {(["signin", "signup"] as const).map((m) => (
             <button
               key={m}
+              type="button"
               onClick={() => {
                 setMode(m);
                 setError(null);
@@ -119,51 +129,33 @@ export function AuthScreen() {
 
         <form onSubmit={handleSubmit} className="space-y-3">
           {mode === "signup" && (
-            <div className="relative">
-              <UserIcon
-                className="absolute left-3.5 top-3.5 text-slate-400"
-                size={18}
-              />
-              <Input
-                label="Full name"
-                placeholder="Jane Traveler"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                required
-                className="pl-10"
-              />
-            </div>
+            <AuthField
+              icon={UserIcon}
+              label="Full name"
+              placeholder="Jane Traveler"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+            />
           )}
-          <div className="relative">
-            <Mail
-              className="absolute left-3.5 top-3.5 text-slate-400"
-              size={18}
-            />
-            <Input
-              label="Email"
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="pl-10"
-            />
-          </div>
-          <div className="relative">
-            <Lock
-              className="absolute left-3.5 top-3.5 text-slate-400"
-              size={18}
-            />
-            <Input
-              label="Password"
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="pl-10"
-            />
-          </div>
+          <AuthField
+            icon={Mail}
+            label="Email"
+            type="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <AuthField
+            icon={Lock}
+            label="Password"
+            type="password"
+            placeholder="••••••••"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
 
           {error && (
             <div className="text-sm text-danger-700 bg-danger-50 border border-danger-200 rounded-lg px-3 py-2">
@@ -189,13 +181,17 @@ export function AuthScreen() {
           <div className="flex-1 h-px bg-slate-200" />
         </div>
 
-        <button
+        <Button
+          type="button"
           onClick={handleGoogle}
           disabled={busy}
-          className="btn-outline w-full py-3 text-sm font-semibold disabled:opacity-50"
+          variant="outline"
+          full
+          size="lg"
+          className="text-sm font-semibold disabled:opacity-50"
         >
           <GoogleIcon /> Continue with Google
-        </button>
+        </Button>
 
         <p className="text-xs muted text-center mt-4 leading-relaxed">
           By continuing you agree to use SafeTrail AI responsibly. Your profile,
@@ -203,6 +199,29 @@ export function AuthScreen() {
         </p>
       </div>
     </div>
+  );
+}
+
+function AuthField({
+  icon: Icon,
+  label,
+  className = "",
+  ...rest
+}: React.InputHTMLAttributes<HTMLInputElement> & {
+  label: string;
+  icon: LucideIcon;
+}) {
+  return (
+    <label className="block">
+      <span className="label">{label}</span>
+      <div className="relative">
+        <Icon
+          className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+          size={18}
+        />
+        <input className={`input pl-11 ${className}`} {...rest} />
+      </div>
+    </label>
   );
 }
 

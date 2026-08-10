@@ -1,21 +1,80 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as
+  | string
+  | undefined;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.error(
-    "Missing Supabase env vars. Check .env for VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.",
-  );
+const missingConfigMessage =
+  "Missing Supabase env vars. Check .env for VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.";
+
+export const SUPABASE_MISSING_MESSAGE = missingConfigMessage;
+export const IS_SUPABASE_CONFIGURED = Boolean(supabaseUrl && supabaseAnonKey);
+
+function createMissingSupabaseClient() {
+  const query = {
+    select() {
+      return query;
+    },
+    eq() {
+      return query;
+    },
+    order() {
+      return query;
+    },
+    limit() {
+      return query;
+    },
+    maybeSingle: async () => ({ data: null, error: { message: missingConfigMessage } }),
+    insert: async () => ({ data: null, error: { message: missingConfigMessage } }),
+    upsert: async () => ({ data: null, error: { message: missingConfigMessage } }),
+    update: async () => ({ data: null, error: { message: missingConfigMessage } }),
+  };
+
+  return {
+    auth: {
+      getSession: async () => ({ data: { session: null }, error: null }),
+      onAuthStateChange: () => ({
+        data: {
+          subscription: {
+            unsubscribe() {},
+          },
+        },
+      }),
+      signInWithPassword: async () => ({
+        data: null,
+        error: { message: missingConfigMessage },
+      }),
+      signUp: async () => ({
+        data: null,
+        error: { message: missingConfigMessage },
+      }),
+      signInWithOAuth: async () => ({
+        data: null,
+        error: { message: missingConfigMessage },
+      }),
+      signOut: async () => ({ error: null }),
+    },
+    from() {
+      return query;
+    },
+  };
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-});
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error(missingConfigMessage);
+}
+
+export const supabase =
+  IS_SUPABASE_CONFIGURED
+    ? createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+        },
+      })
+    : (createMissingSupabaseClient() as ReturnType<typeof createClient>);
 
 export type EmergencyContact = {
   id: string;

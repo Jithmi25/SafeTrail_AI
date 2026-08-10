@@ -1,9 +1,9 @@
 import { X } from "lucide-react";
 import {
-  type ButtonHTMLAttributes,
-  type InputHTMLAttributes,
-  type ReactNode,
-  useEffect,
+    type ButtonHTMLAttributes,
+    type InputHTMLAttributes,
+    type ReactNode,
+    useEffect,
 } from "react";
 
 // ---- Button ----
@@ -34,6 +34,7 @@ export function Button({
   };
   return (
     <button
+      type={rest.type ?? "button"}
       className={`${variants[variant]} ${sizes[size]} ${full ? "w-full" : ""} ${className}`}
       {...rest}
     >

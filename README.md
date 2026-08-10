@@ -10,11 +10,13 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
    npm install
    ```
 
-2. Start the app
+2. Start the web app
 
    ```bash
-   npx expo start
+   npm run web
    ```
+
+This project uses Vite for the web app, so `npm run web` opens the UI from `src/main.tsx`.
 
 In the output, you'll find options to open the app in a
 
