@@ -4,7 +4,7 @@
 >
 > A full-stack, mobile-first application built for the **Smart Cities** domain. SafeTrail AI acts as a guardian in your pocket — combining a live safety map, scam detection, a one-tap emergency SOS system, an AI "Walk With Me" companion, multi-language translation, and a food allergen analyzer into one seamless experience.
 
-🎬 **Demonstration Video:** [#](https://youtu.be/LSk8qZ_bBtY)
+🎬 **Demonstration Video:** [SafeTrailAI - Project Demo](https://youtu.be/LSk8qZ_bBtY)
 
 ---
 
