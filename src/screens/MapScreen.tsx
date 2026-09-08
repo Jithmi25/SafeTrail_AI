@@ -468,7 +468,7 @@ export function MapScreen() {
       <ReportFormModal
         open={showReport}
         onClose={() => setShowReport(false)}
-        userId={user?.id}
+        userId={user?.uid}
         onSubmitted={loadReports}
       />
     </div>

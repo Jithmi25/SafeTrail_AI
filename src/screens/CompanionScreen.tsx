@@ -124,7 +124,7 @@ function ChatCompanion() {
     setSending(true);
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
-      user_id: user.id,
+      user_id: user.uid,
       role: "user",
       content: text,
       context: "companion",
@@ -134,7 +134,7 @@ function ChatCompanion() {
     setInput("");
 
     await supabase.from("chat_messages").insert({
-      user_id: user.id,
+      user_id: user.uid,
       role: "user",
       content: text,
       context: "companion",
@@ -143,7 +143,7 @@ function ChatCompanion() {
     const reply = generateReply(text);
     const aiMsg: ChatMessage = {
       id: crypto.randomUUID(),
-      user_id: user.id,
+      user_id: user.uid,
       role: "assistant",
       content: reply,
       context: "companion",
@@ -153,7 +153,7 @@ function ChatCompanion() {
       setMessages((m) => [...m, aiMsg]);
       setSending(false);
       await supabase.from("chat_messages").insert({
-        user_id: user.id,
+        user_id: user.uid,
         role: "assistant",
         content: reply,
         context: "companion",

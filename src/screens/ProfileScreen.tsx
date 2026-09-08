@@ -11,7 +11,7 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { EMERGENCY_NUMBERS } from "@/data/sriLankaData";
 import { ALLERGENS, DIET_OPTIONS } from "@/lib/aiEngine";
-import type { EmergencyContact } from "@/lib/supabase";
+import type { EmergencyContact } from "@/lib/types";
 import {
   AlertTriangle,
   Bell,

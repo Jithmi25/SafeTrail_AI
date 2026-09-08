@@ -1,33 +1,33 @@
 import {
-    IS_SUPABASE_CONFIGURED,
-    supabase,
-    type EmergencyContact,
-    type Profile,
-} from "@/lib/supabase";
-import type { Session, User } from "@supabase/supabase-js";
+  FIREBASE_MISSING_MESSAGE,
+  firebaseAuth,
+  firestore,
+  IS_FIREBASE_CONFIGURED,
+} from "@/lib/firebase";
+import type { EmergencyContact, Profile } from "@/lib/types";
 import {
-    createContext,
-    useCallback,
-    useContext,
-    useEffect,
-    useState,
-    type ReactNode,
+  browserLocalPersistence,
+  createUserWithEmailAndPassword,
+  signOut as firebaseSignOut,
+  GoogleAuthProvider,
+  onAuthStateChanged,
+  setPersistence,
+  signInWithEmailAndPassword,
+  signInWithPopup,
+  updateProfile as updateFirebaseProfile,
+  type User,
+} from "firebase/auth";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
 } from "react";
 
-type LocalAuthAccount = {
-  id: string;
-  email: string;
-  password: string;
-  fullName: string;
-  profile: Profile;
-};
-
-type LocalAuthState = {
-  accounts: LocalAuthAccount[];
-  currentUserId: string | null;
-};
-
-const LOCAL_AUTH_STORAGE_KEY = "safetrail_local_auth";
+type Session = { user: User };
 
 type AuthContextValue = {
   session: Session | null;
@@ -64,7 +64,7 @@ const EMPTY_PROFILE: Profile = {
   updated_at: "",
 };
 
-function createProfile(id: string, fullName: string): Profile {
+function createProfile(id: string, fullName: string | null): Profile {
   const now = new Date().toISOString();
   return {
     ...EMPTY_PROFILE,
@@ -75,259 +75,148 @@ function createProfile(id: string, fullName: string): Profile {
   };
 }
 
-function createLocalSessionUser(account: LocalAuthAccount): User {
-  return {
-    id: account.id,
-    app_metadata: {},
-    user_metadata: { full_name: account.fullName },
-    aud: "authenticated",
-    created_at: account.profile.created_at,
-  } as User;
-}
-
-function loadLocalAuthState(): LocalAuthState {
-  if (typeof window === "undefined") {
-    return { accounts: [], currentUserId: null };
-  }
-
-  try {
-    const raw = window.localStorage.getItem(LOCAL_AUTH_STORAGE_KEY);
-    if (!raw) return { accounts: [], currentUserId: null };
-    return JSON.parse(raw) as LocalAuthState;
-  } catch {
-    return { accounts: [], currentUserId: null };
-  }
-}
-
-function saveLocalAuthState(state: LocalAuthState) {
-  if (typeof window === "undefined") return;
-  window.localStorage.setItem(LOCAL_AUTH_STORAGE_KEY, JSON.stringify(state));
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
-  const localMode = !IS_SUPABASE_CONFIGURED;
-
-  const loadProfile = useCallback(async (uid: string) => {
-    if (localMode) {
-      const state = loadLocalAuthState();
-      const account = state.accounts.find((entry) => entry.id === uid);
-      if (account) {
-        setProfile(account.profile);
+  const loadProfile = useCallback(
+    async (uid: string, fullName: string | null = null) => {
+      if (!firestore) {
+        setProfile(null);
         return;
       }
-      setProfile(null);
-      return;
-    }
 
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", uid)
-      .maybeSingle();
-    if (error) {
-      console.error("profile load error", error.message);
-      return;
-    }
-    if (data) {
-      setProfile(data as Profile);
-    } else {
-      // Create a profile on first login
-      const { data: created } = await supabase
-        .from("profiles")
-        .insert({ id: uid })
-        .select("*")
-        .maybeSingle();
-      if (created) setProfile(created as Profile);
-      else setProfile({ ...EMPTY_PROFILE, id: uid });
-    }
-  }, []);
+      const profileRef = doc(firestore, "profiles", uid);
+      const snapshot = await getDoc(profileRef);
+      if (snapshot.exists()) {
+        setProfile(snapshot.data() as Profile);
+      } else {
+        const newProfile = createProfile(uid, fullName);
+        await setDoc(profileRef, newProfile);
+        setProfile(newProfile);
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
-    if (localMode) {
-      const state = loadLocalAuthState();
-      const activeAccount = state.accounts.find(
-        (account) => account.id === state.currentUserId,
-      );
-      if (activeAccount) {
-        const localUser = createLocalSessionUser(activeAccount);
-        setSession({ user: localUser } as Session);
-        setUser(localUser);
-        setProfile(activeAccount.profile);
-      } else {
-        setSession(null);
-        setUser(null);
-        setProfile(null);
-      }
+    if (!firebaseAuth || !IS_FIREBASE_CONFIGURED) {
       setLoading(false);
       return;
     }
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-      setUser(data.session?.user ?? null);
-      if (data.session?.user) {
-        loadProfile(data.session.user.id).finally(() => setLoading(false));
-      } else {
+    const auth = firebaseAuth;
+    let unsubscribe = () => {};
+    setPersistence(auth, browserLocalPersistence)
+      .then(() => {
+        unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+          setUser(nextUser);
+          setSession(nextUser ? { user: nextUser } : null);
+          if (nextUser) {
+            loadProfile(nextUser.uid, nextUser.displayName).finally(() =>
+              setLoading(false),
+            );
+          } else {
+            setProfile(null);
+            setLoading(false);
+          }
+        });
+      })
+      .catch((error: Error) => {
+        console.error("Firebase persistence setup failed", error.message);
         setLoading(false);
-      }
-    });
+      });
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, sess) => {
-      setSession(sess);
-      setUser(sess?.user ?? null);
-      if (sess?.user) {
-        (async () => {
-          await loadProfile(sess.user.id);
-          setLoading(false);
-        })();
-      } else {
-        setProfile(null);
-        setLoading(false);
-      }
-    });
-
-    return () => sub.subscription.unsubscribe();
+    return () => {
+      unsubscribe();
+    };
   }, [loadProfile]);
 
   const signInWithEmail = useCallback(
     async (email: string, password: string) => {
-      if (localMode) {
-        const state = loadLocalAuthState();
-        const account = state.accounts.find(
-          (entry) => entry.email.toLowerCase() === email.toLowerCase(),
-        );
-        if (!account || account.password !== password) {
-          return { error: "Invalid email or password" };
-        }
-        state.currentUserId = account.id;
-        saveLocalAuthState(state);
-        const localUser = createLocalSessionUser(account);
-        setSession({ user: localUser } as Session);
-        setUser(localUser);
-        setProfile(account.profile);
+      if (!firebaseAuth) return { error: FIREBASE_MISSING_MESSAGE };
+      try {
+        await signInWithEmailAndPassword(firebaseAuth, email, password);
         return { error: null };
+      } catch (error) {
+        return {
+          error: error instanceof Error ? error.message : "Unable to sign in",
+        };
       }
-
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      return { error: error?.message ?? null };
     },
     [],
   );
 
   const signUpWithEmail = useCallback(
     async (email: string, password: string, fullName: string) => {
-      if (localMode) {
-        const state = loadLocalAuthState();
-        const existing = state.accounts.find(
-          (entry) => entry.email.toLowerCase() === email.toLowerCase(),
-        );
-        if (existing) {
-          return { error: "An account with this email already exists" };
-        }
-
-        const id = crypto.randomUUID();
-        const profile = createProfile(id, fullName);
-        const account: LocalAuthAccount = {
-          id,
+      if (!firebaseAuth || !firestore)
+        return { error: FIREBASE_MISSING_MESSAGE };
+      try {
+        const credential = await createUserWithEmailAndPassword(
+          firebaseAuth,
           email,
           password,
-          fullName,
-          profile,
-        };
-        state.accounts.push(account);
-        state.currentUserId = id;
-        saveLocalAuthState(state);
-
-        const localUser = createLocalSessionUser(account);
-        setSession({ user: localUser } as Session);
-        setUser(localUser);
+        );
+        await updateFirebaseProfile(credential.user, { displayName: fullName });
+        const profile = createProfile(credential.user.uid, fullName);
+        await setDoc(doc(firestore, "profiles", credential.user.uid), profile);
         setProfile(profile);
         return { error: null };
+      } catch (error) {
+        return {
+          error:
+            error instanceof Error ? error.message : "Unable to create account",
+        };
       }
-
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: fullName } },
-      });
-      if (error) return { error: error.message };
-      if (data.user) {
-        await supabase.from("profiles").upsert({
-          id: data.user.id,
-          full_name: fullName,
-        });
-      }
-      return { error: null };
     },
     [],
   );
 
   const signInWithGoogle = useCallback(async () => {
-    if (localMode) {
-      return { error: "Google sign-in requires Supabase configuration" };
+    if (!firebaseAuth) return { error: FIREBASE_MISSING_MESSAGE };
+    try {
+      await signInWithPopup(firebaseAuth, new GoogleAuthProvider());
+      return { error: null };
+    } catch (error) {
+      return {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to sign in with Google",
+      };
     }
-
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: window.location.origin },
-    });
-    return { error: error?.message ?? null };
   }, []);
 
   const signOut = useCallback(async () => {
-    if (localMode) {
-      const state = loadLocalAuthState();
-      state.currentUserId = null;
-      saveLocalAuthState(state);
-      setSession(null);
-      setUser(null);
-      setProfile(null);
-      return;
-    }
-
-    await supabase.auth.signOut();
-    setProfile(null);
+    if (firebaseAuth) await firebaseSignOut(firebaseAuth);
   }, []);
 
   const refreshProfile = useCallback(async () => {
-    if (user) await loadProfile(user.id);
+    if (user) await loadProfile(user.uid, user.displayName);
   }, [user, loadProfile]);
 
   const updateProfile = useCallback(
     async (patch: Partial<Profile>) => {
       if (!user) return { error: "Not signed in" };
 
-      if (localMode) {
-        const state = loadLocalAuthState();
-        const account = state.accounts.find((entry) => entry.id === user.id);
-        if (!account) return { error: "Not signed in" };
-        account.profile = {
-          ...account.profile,
-          ...patch,
-          updated_at: new Date().toISOString(),
-        };
-        if (typeof patch.full_name === "string") {
-          account.fullName = patch.full_name;
+      if (!firestore) return { error: FIREBASE_MISSING_MESSAGE };
+      try {
+        const update = { ...patch, updated_at: new Date().toISOString() };
+        await updateDoc(doc(firestore, "profiles", user.uid), update);
+        if (patch.full_name !== undefined) {
+          await updateFirebaseProfile(user, {
+            displayName: patch.full_name ?? "",
+          });
         }
-        saveLocalAuthState(state);
-        setProfile(account.profile);
+        await loadProfile(user.uid, user.displayName);
         return { error: null };
+      } catch (error) {
+        return {
+          error:
+            error instanceof Error ? error.message : "Unable to update profile",
+        };
       }
-
-      const { error } = await supabase
-        .from("profiles")
-        .update({ ...patch, updated_at: new Date().toISOString() })
-        .eq("id", user.id);
-      if (error) return { error: error.message };
-      await loadProfile(user.id);
-      return { error: null };
     },
     [user, loadProfile],
   );
@@ -359,4 +248,3 @@ export function useAuth() {
 }
 
 export type { EmergencyContact };
-

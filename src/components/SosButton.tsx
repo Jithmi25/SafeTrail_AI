@@ -81,7 +81,7 @@ export function SosButton() {
       const { data } = await supabase
         .from("sos_incidents")
         .insert({
-          user_id: user.id,
+          user_id: user.uid,
           status: "triggered",
           lat,
           lng,

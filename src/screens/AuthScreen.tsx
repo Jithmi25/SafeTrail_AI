@@ -1,20 +1,20 @@
 import { Button, Spinner } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 import {
-    IS_SUPABASE_CONFIGURED,
-    SUPABASE_MISSING_MESSAGE,
-} from "@/lib/supabase";
+  FIREBASE_MISSING_MESSAGE,
+  IS_FIREBASE_CONFIGURED,
+} from "@/lib/firebase";
 import {
-    ArrowRight,
-    Bell,
-    Languages,
-    Lock,
-    Mail,
-    MapPin,
-    Shield,
-    Sparkles,
-    User as UserIcon,
-    type LucideIcon,
+  ArrowRight,
+  Bell,
+  Languages,
+  Lock,
+  Mail,
+  MapPin,
+  Shield,
+  Sparkles,
+  User as UserIcon,
+  type LucideIcon,
 } from "lucide-react";
 import { useState } from "react";
 
@@ -47,8 +47,8 @@ export function AuthScreen() {
   }
 
   async function handleGoogle() {
-    if (!IS_SUPABASE_CONFIGURED) {
-      setError(SUPABASE_MISSING_MESSAGE);
+    if (!IS_FIREBASE_CONFIGURED) {
+      setError(FIREBASE_MISSING_MESSAGE);
       return;
     }
     setError(null);
