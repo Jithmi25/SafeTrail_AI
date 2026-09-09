@@ -17,7 +17,7 @@ import {
   updateProfile as updateFirebaseProfile,
   type User,
 } from "firebase/auth";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import {
   createContext,
   useCallback,
@@ -34,6 +34,8 @@ type AuthContextValue = {
   user: User | null;
   profile: Profile | null;
   loading: boolean;
+  profileLoading: boolean;
+  profileError: string | null;
   signInWithEmail: (
     email: string,
     password: string,
@@ -80,21 +82,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const loadProfile = useCallback(
     async (uid: string, fullName: string | null = null) => {
+      setProfileLoading(true);
+      setProfileError(null);
       if (!firestore) {
         setProfile(null);
+        setProfileError(FIREBASE_MISSING_MESSAGE);
+        setProfileLoading(false);
         return;
       }
 
-      const profileRef = doc(firestore, "profiles", uid);
-      const snapshot = await getDoc(profileRef);
-      if (snapshot.exists()) {
-        setProfile(snapshot.data() as Profile);
-      } else {
-        const newProfile = createProfile(uid, fullName);
-        await setDoc(profileRef, newProfile);
-        setProfile(newProfile);
+      try {
+        const profileRef = doc(firestore, "users", uid);
+        const snapshot = await getDoc(profileRef);
+        if (snapshot.exists()) {
+          setProfile({ ...EMPTY_PROFILE, ...snapshot.data(), id: uid });
+        } else {
+          const newProfile = createProfile(uid, fullName);
+          await setDoc(profileRef, newProfile);
+          setProfile(newProfile);
+        }
+      } catch (error) {
+        setProfile(null);
+        setProfileError(
+          error instanceof Error ? error.message : "Unable to load profile",
+        );
+      } finally {
+        setProfileLoading(false);
       }
     },
     [],
@@ -119,6 +136,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             );
           } else {
             setProfile(null);
+            setProfileError(null);
             setLoading(false);
           }
         });
@@ -160,7 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
         await updateFirebaseProfile(credential.user, { displayName: fullName });
         const profile = createProfile(credential.user.uid, fullName);
-        await setDoc(doc(firestore, "profiles", credential.user.uid), profile);
+        await setDoc(doc(firestore, "users", credential.user.uid), profile);
         setProfile(profile);
         return { error: null };
       } catch (error) {
@@ -203,7 +221,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!firestore) return { error: FIREBASE_MISSING_MESSAGE };
       try {
         const update = { ...patch, updated_at: new Date().toISOString() };
-        await updateDoc(doc(firestore, "profiles", user.uid), update);
+        await setDoc(doc(firestore, "users", user.uid), update, {
+          merge: true,
+        });
         if (patch.full_name !== undefined) {
           await updateFirebaseProfile(user, {
             displayName: patch.full_name ?? "",
@@ -228,6 +248,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         profile,
         loading,
+        profileLoading,
+        profileError,
         signInWithEmail,
         signUpWithEmail,
         signInWithGoogle,

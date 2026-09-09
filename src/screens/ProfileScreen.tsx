@@ -24,7 +24,7 @@ import {
   Trash2,
   User as UserIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 const COUNTRIES = [
   "United States",
@@ -45,17 +45,44 @@ const LANGS = [
 ];
 
 export function ProfileScreen() {
-  const { user, profile, signOut, updateProfile } = useAuth();
+  const {
+    user,
+    profile,
+    profileLoading,
+    profileError,
+    refreshProfile,
+    signOut,
+    updateProfile,
+  } = useAuth();
   const [editing, setEditing] = useState(false);
   const [showContacts, setShowContacts] = useState(false);
   const [showDiet, setShowDiet] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   async function save(patch: any) {
     setBusy(true);
-    await updateProfile(patch);
+    setActionError(null);
+    const result = await updateProfile(patch);
     setBusy(false);
-    setEditing(false);
+    if (result.error) {
+      setActionError(result.error);
+    } else {
+      setEditing(false);
+    }
+  }
+
+  useEffect(() => {
+    setActionError(null);
+  }, [profile]);
+
+  if (profileLoading && !profile) {
+    return (
+      <div className="screen max-w-md mx-auto px-4 pt-8 text-center">
+        <Spinner className="mx-auto" />
+        <p className="muted mt-3">Loading your profile...</p>
+      </div>
+    );
   }
 
   return (
@@ -65,6 +92,23 @@ export function ProfileScreen() {
         subtitle="Account, contacts, and safety preferences"
         icon={<UserIcon size={22} />}
       />
+
+      {(profileError || actionError) && (
+        <div className="mb-4 rounded-xl border border-danger-200 bg-danger-50 px-3 py-3 text-sm text-danger-700">
+          <p>{actionError ?? profileError}</p>
+          {profileError && !actionError && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-2"
+              onClick={refreshProfile}
+              disabled={profileLoading}
+            >
+              {profileLoading ? <Spinner size={14} /> : "Try again"}
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Account card */}
       <Card className="mb-4">
@@ -186,7 +230,11 @@ export function ProfileScreen() {
         <Select
           value={profile?.language_preference ?? "en"}
           onChange={async (e) => {
-            await updateProfile({ language_preference: e.target.value });
+            setActionError(null);
+            const result = await updateProfile({
+              language_preference: e.target.value,
+            });
+            if (result.error) setActionError(result.error);
           }}
         >
           {LANGS.map((l) => (
@@ -323,6 +371,7 @@ function ContactsModal({
   const [phone, setPhone] = useState("");
   const [relationship, setRelationship] = useState("Family");
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function add() {
     if (!name.trim() || !phone.trim()) return;
@@ -341,14 +390,17 @@ function ContactsModal({
 
   async function save() {
     setSaving(true);
-    await updateProfile({ emergency_contacts: contacts });
+    setError(null);
+    const result = await updateProfile({ emergency_contacts: contacts });
     setSaving(false);
-    onClose();
+    if (result.error) setError(result.error);
+    else onClose();
   }
 
   return (
     <Modal open={open} onClose={onClose} title="Emergency contacts" size="md">
       <div className="space-y-3">
+        {error && <p className="text-sm text-danger-700">{error}</p>}
         <div className="space-y-2">
           {contacts.map((c) => (
             <div
@@ -435,6 +487,7 @@ function DietModal({ open, onClose }: { open: boolean; onClose: () => void }) {
     profile?.dietary_restrictions ?? [],
   );
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   function toggle(list: string[], item: string) {
     return list.includes(item)
@@ -444,9 +497,14 @@ function DietModal({ open, onClose }: { open: boolean; onClose: () => void }) {
 
   async function save() {
     setSaving(true);
-    await updateProfile({ allergies: allergens, dietary_restrictions: diet });
+    setError(null);
+    const result = await updateProfile({
+      allergies: allergens,
+      dietary_restrictions: diet,
+    });
     setSaving(false);
-    onClose();
+    if (result.error) setError(result.error);
+    else onClose();
   }
 
   return (
@@ -457,6 +515,7 @@ function DietModal({ open, onClose }: { open: boolean; onClose: () => void }) {
       size="md"
     >
       <div className="space-y-4">
+        {error && <p className="text-sm text-danger-700">{error}</p>}
         <div>
           <p className="label">Dietary preferences</p>
           <div className="flex flex-wrap gap-2">
