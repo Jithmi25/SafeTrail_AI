@@ -1,0 +1,47 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    // A profile is stored at users/{userId} and can only be accessed by its owner.
+    match /users/{userId} {
+      allow read, create, update: if isOwner(userId);
+
+      match /chatMessages/{messageId} {
+        allow read, create: if isOwner(userId);
+        allow update, delete: if false;
+      }
+    }
+
+    match /safetyReports/{reportId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid;
+      allow update: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId;
+      allow delete: if signedIn()
+        && resource.data.userId == request.auth.uid;
+    }
+
+    match /sosIncidents/{incidentId} {
+      allow read, update: if signedIn()
+        && resource.data.userId == request.auth.uid
+        && request.resource.data.userId == resource.data.userId;
+      allow create: if signedIn()
+        && request.resource.data.userId == request.auth.uid;
+    }
+
+    // Deny every collection that is not explicitly defined above.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
