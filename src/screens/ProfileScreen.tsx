@@ -315,6 +315,13 @@ function EditProfileModal({
   const [name, setName] = useState(profile?.full_name ?? "");
   const [country, setCountry] = useState(profile?.country_of_origin ?? "");
 
+  useEffect(() => {
+    if (open) {
+      setName(profile?.full_name ?? "");
+      setCountry(profile?.country_of_origin ?? "");
+    }
+  }, [open, profile]);
+
   return (
     <Modal open={open} onClose={onClose} title="Edit profile">
       <div className="space-y-3">
@@ -372,6 +379,10 @@ function ContactsModal({
   const [relationship, setRelationship] = useState("Family");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) setContacts(profile?.emergency_contacts ?? []);
+  }, [open, profile]);
 
   function add() {
     if (!name.trim() || !phone.trim()) return;
@@ -488,6 +499,13 @@ function DietModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open) {
+      setAllergens(profile?.allergies ?? []);
+      setDiet(profile?.dietary_restrictions ?? []);
+    }
+  }, [open, profile]);
 
   function toggle(list: string[], item: string) {
     return list.includes(item)
