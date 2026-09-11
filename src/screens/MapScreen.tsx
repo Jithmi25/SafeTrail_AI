@@ -13,7 +13,8 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import type { MapMarker, SafetyZone } from "@/data/sriLankaData";
 import { MAP_MARKERS, SAFE_ROUTES, SAFETY_ZONES } from "@/data/sriLankaData";
-import { supabase, type SafetyReport } from "@/lib/supabase";
+import { createSafetyReport, loadSafetyReports } from "@/lib/safetyReports";
+import type { SafetyReport } from "@/lib/types";
 import {
   AlertTriangle,
   Building2,
@@ -27,7 +28,7 @@ import {
   Shield,
   Siren,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 type LayerKey =
   | "zones"
@@ -91,15 +92,15 @@ export function MapScreen() {
 
   async function loadReports() {
     setLoadingReports(true);
-    const { data } = await supabase
-      .from("safety_reports")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(50);
-    setReports((data ?? []) as SafetyReport[]);
-    setLoadingReports(false);
+    try {
+      setReports(await loadSafetyReports());
+    } catch (error) {
+      console.error("Safety reports load error", error);
+    } finally {
+      setLoadingReports(false);
+    }
   }
-  useMemo(() => {
+  useEffect(() => {
     loadReports();
   }, []);
 
@@ -500,24 +501,30 @@ function ReportFormModal({
   async function submit() {
     setSubmitting(true);
     setError(null);
-    const { error } = await supabase.from("safety_reports").insert({
-      user_id: userId,
-      category,
-      severity,
-      description,
-      location_label: locationLabel,
-      lat: parseFloat(lat) || 6.9271,
-      lng: parseFloat(lng) || 79.8612,
-    });
-    setSubmitting(false);
-    if (error) {
-      setError(error.message);
-      return;
+    try {
+      if (!userId) throw new Error("You must be signed in to submit a report");
+      await createSafetyReport({
+        user_id: userId,
+        category,
+        severity,
+        description,
+        location_label: locationLabel,
+        lat: Number.parseFloat(lat),
+        lng: Number.parseFloat(lng),
+      });
+      setDescription("");
+      setLocationLabel("");
+      onSubmitted();
+      onClose();
+    } catch (submissionError) {
+      setError(
+        submissionError instanceof Error
+          ? submissionError.message
+          : "Unable to submit report",
+      );
+    } finally {
+      setSubmitting(false);
     }
-    setDescription("");
-    setLocationLabel("");
-    onSubmitted();
-    onClose();
   }
 
   return (

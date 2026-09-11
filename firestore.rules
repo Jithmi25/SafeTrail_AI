@@ -10,6 +10,26 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == userId;
     }
 
+    function validSafetyReport(data) {
+      return data.userId is string
+        && data.userId == request.auth.uid
+        && data.category in [
+          'unsafe_area',
+          'scam',
+          'bad_lighting',
+          'suspicious_activity',
+          'safe_area'
+        ]
+        && data.severity in ['safe', 'low', 'moderate', 'high', 'critical']
+        && data.lat is number
+        && data.lat >= -90
+        && data.lat <= 90
+        && data.lng is number
+        && data.lng >= -180
+        && data.lng <= 180
+        && data.createdAt == request.time;
+    }
+
     // A profile is stored at users/{userId} and can only be accessed by its owner.
     match /users/{userId} {
       allow read, create, update: if isOwner(userId);
@@ -22,11 +42,31 @@ service cloud.firestore {
 
     match /safetyReports/{reportId} {
       allow read: if signedIn();
-      allow create: if signedIn()
-        && request.resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && validSafetyReport(request.resource.data);
       allow update: if signedIn()
         && resource.data.userId == request.auth.uid
-        && request.resource.data.userId == resource.data.userId;
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.category in [
+          'unsafe_area',
+          'scam',
+          'bad_lighting',
+          'suspicious_activity',
+          'safe_area'
+        ]
+        && request.resource.data.severity in [
+          'safe',
+          'low',
+          'moderate',
+          'high',
+          'critical'
+        ]
+        && request.resource.data.lat is number
+        && request.resource.data.lat >= -90
+        && request.resource.data.lat <= 90
+        && request.resource.data.lng is number
+        && request.resource.data.lng >= -180
+        && request.resource.data.lng <= 180;
       allow delete: if signedIn()
         && resource.data.userId == request.auth.uid;
     }

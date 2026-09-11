@@ -17,3 +17,21 @@ export type Profile = {
   created_at: string;
   updated_at: string;
 };
+
+export type SafetyReport = {
+  id: string;
+  user_id: string;
+  category:
+    | "unsafe_area"
+    | "scam"
+    | "bad_lighting"
+    | "suspicious_activity"
+    | "safe_area";
+  description: string | null;
+  lat: number;
+  lng: number;
+  location_label: string | null;
+  severity: "safe" | "low" | "moderate" | "high" | "critical";
+  upvotes: number;
+  created_at: string;
+};
