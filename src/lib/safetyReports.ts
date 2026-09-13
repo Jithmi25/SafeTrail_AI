@@ -29,15 +29,20 @@ const REPORT_SEVERITIES = [
 
 type SafetyReportInput = Pick<
   SafetyReport,
-  "category" | "severity" | "description" | "location_label" | "lat" | "lng"
-> & { user_id: string };
+  | "category"
+  | "severity"
+  | "description"
+  | "locationLabel"
+  | "latitude"
+  | "longitude"
+> & { userId: string };
 
 function isValidCoordinate(value: number, min: number, max: number) {
   return Number.isFinite(value) && value >= min && value <= max;
 }
 
 function validateReportInput(input: SafetyReportInput) {
-  if (!input.user_id)
+  if (!input.userId)
     throw new Error("You must be signed in to submit a report");
   if (!REPORT_CATEGORIES.includes(input.category)) {
     throw new Error("Choose a valid report category");
@@ -45,10 +50,10 @@ function validateReportInput(input: SafetyReportInput) {
   if (!REPORT_SEVERITIES.includes(input.severity)) {
     throw new Error("Choose a valid report severity");
   }
-  if (!isValidCoordinate(input.lat, -90, 90)) {
+  if (!isValidCoordinate(input.latitude, -90, 90)) {
     throw new Error("Latitude must be between -90 and 90");
   }
-  if (!isValidCoordinate(input.lng, -180, 180)) {
+  if (!isValidCoordinate(input.longitude, -180, 180)) {
     throw new Error("Longitude must be between -180 and 180");
   }
 }
@@ -67,15 +72,15 @@ function toSafetyReport(
 
   return {
     id,
-    user_id: String(data.userId ?? ""),
+    userId: String(data.userId ?? ""),
     category: data.category as SafetyReport["category"],
     description: (data.description as string | null) ?? null,
-    lat: Number(data.lat),
-    lng: Number(data.lng),
-    location_label: (data.locationLabel as string | null) ?? null,
+    latitude: Number(data.latitude),
+    longitude: Number(data.longitude),
+    locationLabel: (data.locationLabel as string | null) ?? null,
     severity: data.severity as SafetyReport["severity"],
     upvotes: Number(data.upvotes ?? 0),
-    created_at: createdAt,
+    createdAt,
   };
 }
 
@@ -98,13 +103,13 @@ export async function createSafetyReport(input: SafetyReportInput) {
   validateReportInput(input);
 
   const report = await addDoc(collection(firestore, "safetyReports"), {
-    userId: input.user_id,
+    userId: input.userId,
     category: input.category,
     severity: input.severity,
     description: input.description.trim() || null,
-    locationLabel: input.location_label.trim() || null,
-    lat: input.lat,
-    lng: input.lng,
+    locationLabel: input.locationLabel.trim() || null,
+    latitude: input.latitude,
+    longitude: input.longitude,
     upvotes: 0,
     createdAt: serverTimestamp(),
   });

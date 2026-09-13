@@ -21,21 +21,35 @@ service cloud.firestore {
           'safe_area'
         ]
         && data.severity in ['safe', 'low', 'moderate', 'high', 'critical']
-        && data.lat is number
-        && data.lat >= -90
-        && data.lat <= 90
-        && data.lng is number
-        && data.lng >= -180
-        && data.lng <= 180
+        && data.latitude is number
+        && data.latitude >= -90
+        && data.latitude <= 90
+        && data.longitude is number
+        && data.longitude >= -180
+        && data.longitude <= 180
         && data.createdAt == request.time;
     }
 
-    // A profile is stored at users/{userId} and can only be accessed by its owner.
-    match /users/{userId} {
+    function validSosIncident(data) {
+      return data.userId is string
+        && data.userId == request.auth.uid
+        && data.status in ['triggered', 'acknowledged', 'resolved', 'cancelled']
+        && (data.latitude is number || data.latitude == null)
+        && (data.longitude is number || data.longitude == null)
+        && data.contactsNotified is number
+        && data.createdAt == request.time;
+    }
+
+    // A profile is stored at profiles/{userId} and can only be accessed by its owner.
+    match /profiles/{userId} {
       allow read, create, update: if isOwner(userId);
 
       match /chatMessages/{messageId} {
-        allow read, create: if isOwner(userId);
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && request.resource.data.userId == userId
+          && request.resource.data.createdAt == request.time
+          && request.resource.data.role in ['user', 'assistant'];
         allow update, delete: if false;
       }
     }
@@ -61,22 +75,23 @@ service cloud.firestore {
           'high',
           'critical'
         ]
-        && request.resource.data.lat is number
-        && request.resource.data.lat >= -90
-        && request.resource.data.lat <= 90
-        && request.resource.data.lng is number
-        && request.resource.data.lng >= -180
-        && request.resource.data.lng <= 180;
+        && request.resource.data.latitude is number
+        && request.resource.data.latitude >= -90
+        && request.resource.data.latitude <= 90
+        && request.resource.data.longitude is number
+        && request.resource.data.longitude >= -180
+        && request.resource.data.longitude <= 180;
       allow delete: if signedIn()
         && resource.data.userId == request.auth.uid;
     }
 
     match /sosIncidents/{incidentId} {
-      allow read, update: if signedIn()
+      allow read: if signedIn() && resource.data.userId == request.auth.uid;
+      allow create: if signedIn() && validSosIncident(request.resource.data);
+      allow update: if signedIn()
         && resource.data.userId == request.auth.uid
-        && request.resource.data.userId == resource.data.userId;
-      allow create: if signedIn()
-        && request.resource.data.userId == request.auth.uid;
+        && request.resource.data.userId == resource.data.userId
+        && request.resource.data.status in ['triggered', 'acknowledged', 'resolved', 'cancelled'];
     }
 
     // Deny every collection that is not explicitly defined above.

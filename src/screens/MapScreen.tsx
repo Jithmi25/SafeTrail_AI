@@ -117,8 +117,8 @@ export function MapScreen() {
 
   // Convert community reports to map coordinates (normalize 6.0-9.5N, 79.5-81.9E)
   function reportToXY(r: SafetyReport): { x: number; y: number } {
-    const x = ((r.lng - 79.5) / (81.9 - 79.5)) * 100;
-    const y = ((9.5 - r.lat) / (9.5 - 5.0)) * 100;
+    const x = ((r.longitude - 79.5) / (81.9 - 79.5)) * 100;
+    const y = ((9.5 - r.latitude) / (9.5 - 5.0)) * 100;
     return { x: Math.max(2, Math.min(98, x)), y: Math.max(2, Math.min(98, y)) };
   }
 
@@ -504,13 +504,13 @@ function ReportFormModal({
     try {
       if (!userId) throw new Error("You must be signed in to submit a report");
       await createSafetyReport({
-        user_id: userId,
+        userId,
         category,
         severity,
         description,
-        location_label: locationLabel,
-        lat: Number.parseFloat(lat),
-        lng: Number.parseFloat(lng),
+        locationLabel,
+        latitude: Number.parseFloat(lat),
+        longitude: Number.parseFloat(lng),
       });
       setDescription("");
       setLocationLabel("");

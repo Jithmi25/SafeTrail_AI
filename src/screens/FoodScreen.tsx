@@ -44,7 +44,7 @@ export function FoodScreen() {
   const [showSettings, setShowSettings] = useState(false);
 
   const userAllergens = profile?.allergies ?? [];
-  const userDiet = profile?.dietary_restrictions ?? [];
+  const userDiet = profile?.dietaryRestrictions ?? [];
 
   async function scan(menuId: string) {
     setSelectedMenu(menuId);
@@ -437,7 +437,7 @@ function DietarySettingsModal({
     profile?.allergies ?? [],
   );
   const [diet, setDiet] = useState<string[]>(
-    profile?.dietary_restrictions ?? [],
+    profile?.dietaryRestrictions ?? [],
   );
   const [saving, setSaving] = useState(false);
 
@@ -449,7 +449,7 @@ function DietarySettingsModal({
 
   async function save() {
     setSaving(true);
-    await updateProfile({ allergies: allergens, dietary_restrictions: diet });
+    await updateProfile({ allergies: allergens, dietaryRestrictions: diet });
     setSaving(false);
     onClose();
   }

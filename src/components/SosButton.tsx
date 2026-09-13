@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 import { EMERGENCY_NUMBERS } from "@/data/sriLankaData";
-import { supabase } from "@/lib/supabase";
+import { createSosIncident, updateSosIncidentStatus } from "@/lib/sosIncidents";
 import {
   AlertTriangle,
   Check,
@@ -78,32 +78,29 @@ export function SosButton() {
 
     // Record an incident in the database
     if (user) {
-      const { data } = await supabase
-        .from("sos_incidents")
-        .insert({
-          user_id: user.uid,
-          status: "triggered",
-          lat,
-          lng,
-          location_label: label,
-        })
-        .select("id")
-        .maybeSingle();
-      if (data) setIncidentId(data.id);
+      try {
+        const id = await createSosIncident({
+          userId: user.uid,
+          latitude: lat,
+          longitude: lng,
+          locationLabel: label,
+          contactsNotified: profile?.emergencyContacts?.length ?? 0,
+        });
+        setIncidentId(id);
+      } catch (error) {
+        console.error("SOS incident save error", error);
+      }
     }
 
     // Simulate notifying emergency contacts
-    const count = profile?.emergency_contacts?.length ?? 0;
+    const count = profile?.emergencyContacts?.length ?? 0;
     setContactsNotified(count);
     setRecording(true);
   }
 
   async function resolveIncident() {
     if (incidentId && user) {
-      await supabase
-        .from("sos_incidents")
-        .update({ status: "resolved", resolved_at: new Date().toISOString() })
-        .eq("id", incidentId);
+      await updateSosIncidentStatus(incidentId, user.uid, "resolved");
     }
     cancel();
   }

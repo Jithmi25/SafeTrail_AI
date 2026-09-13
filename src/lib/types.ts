@@ -7,20 +7,20 @@ export type EmergencyContact = {
 
 export type Profile = {
   id: string;
-  full_name: string | null;
-  avatar_url: string | null;
-  country_of_origin: string | null;
-  language_preference: string;
-  emergency_contacts: EmergencyContact[];
-  dietary_restrictions: string[];
+  fullName: string | null;
+  avatarUrl: string | null;
+  countryOfOrigin: string | null;
+  languagePreference: string;
+  emergencyContacts: EmergencyContact[];
+  dietaryRestrictions: string[];
   allergies: string[];
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type SafetyReport = {
   id: string;
-  user_id: string;
+  userId: string;
   category:
     | "unsafe_area"
     | "scam"
@@ -28,10 +28,32 @@ export type SafetyReport = {
     | "suspicious_activity"
     | "safe_area";
   description: string | null;
-  lat: number;
-  lng: number;
-  location_label: string | null;
+  latitude: number;
+  longitude: number;
+  locationLabel: string | null;
   severity: "safe" | "low" | "moderate" | "high" | "critical";
   upvotes: number;
-  created_at: string;
+  createdAt: string;
+};
+
+export type SosIncident = {
+  id: string;
+  userId: string;
+  status: "triggered" | "acknowledged" | "resolved" | "cancelled";
+  latitude: number | null;
+  longitude: number | null;
+  locationLabel: string | null;
+  contactsNotified: number;
+  notes: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+};
+
+export type ChatMessage = {
+  id: string;
+  userId: string;
+  role: "user" | "assistant";
+  content: string;
+  context: string;
+  createdAt: string;
 };

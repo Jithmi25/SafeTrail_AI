@@ -10,9 +10,9 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import type { Phrase } from "@/data/phrases";
 import { PHRASES, PHRASE_CATEGORIES } from "@/data/phrases";
+import { createChatMessage, loadChatMessages } from "@/lib/chatMessages";
 import { CHECKIN_PROMPTS, generateReply } from "@/lib/companion";
 import { detectFallOrSuddenStop, simulateMotionStream } from "@/lib/safety";
-import { supabase, type ChatMessage } from "@/lib/supabase";
 import {
   LANG_LABELS,
   speak,
@@ -20,6 +20,7 @@ import {
   translate,
   type Lang,
 } from "@/lib/translation";
+import type { ChatMessage } from "@/lib/types";
 import type { LucideIcon } from "lucide-react";
 import {
   Activity,
@@ -101,14 +102,11 @@ function ChatCompanion() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("chat_messages")
-        .select("*")
-        .eq("context", "companion")
-        .order("created_at", { ascending: true })
-        .limit(50);
-      setMessages((data ?? []) as ChatMessage[]);
-      setLoading(false);
+      try {
+        setMessages(await loadChatMessages(user?.uid ?? ""));
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 
@@ -124,17 +122,17 @@ function ChatCompanion() {
     setSending(true);
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
-      user_id: user.uid,
+      userId: user.uid,
       role: "user",
       content: text,
       context: "companion",
-      created_at: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
     };
     setMessages((m) => [...m, userMsg]);
     setInput("");
 
-    await supabase.from("chat_messages").insert({
-      user_id: user.uid,
+    await createChatMessage({
+      userId: user.uid,
       role: "user",
       content: text,
       context: "companion",
@@ -143,17 +141,17 @@ function ChatCompanion() {
     const reply = generateReply(text);
     const aiMsg: ChatMessage = {
       id: crypto.randomUUID(),
-      user_id: user.uid,
+      userId: user.uid,
       role: "assistant",
       content: reply,
       context: "companion",
-      created_at: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
     };
     setTimeout(async () => {
       setMessages((m) => [...m, aiMsg]);
       setSending(false);
-      await supabase.from("chat_messages").insert({
-        user_id: user.uid,
+      await createChatMessage({
+        userId: user.uid,
         role: "assistant",
         content: reply,
         context: "companion",

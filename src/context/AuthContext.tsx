@@ -55,15 +55,15 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 const EMPTY_PROFILE: Profile = {
   id: "",
-  full_name: null,
-  avatar_url: null,
-  country_of_origin: null,
-  language_preference: "en",
-  emergency_contacts: [],
-  dietary_restrictions: [],
+  fullName: null,
+  avatarUrl: null,
+  countryOfOrigin: null,
+  languagePreference: "en",
+  emergencyContacts: [],
+  dietaryRestrictions: [],
   allergies: [],
-  created_at: "",
-  updated_at: "",
+  createdAt: "",
+  updatedAt: "",
 };
 
 function createProfile(id: string, fullName: string | null): Profile {
@@ -71,9 +71,9 @@ function createProfile(id: string, fullName: string | null): Profile {
   return {
     ...EMPTY_PROFILE,
     id,
-    full_name: fullName,
-    created_at: now,
-    updated_at: now,
+    fullName,
+    createdAt: now,
+    updatedAt: now,
   };
 }
 
@@ -96,7 +96,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        const profileRef = doc(firestore, "users", uid);
+        const profileRef = doc(firestore, "profiles", uid);
         const snapshot = await getDoc(profileRef);
         if (snapshot.exists()) {
           setProfile({ ...EMPTY_PROFILE, ...snapshot.data(), id: uid });
@@ -178,7 +178,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
         await updateFirebaseProfile(credential.user, { displayName: fullName });
         const profile = createProfile(credential.user.uid, fullName);
-        await setDoc(doc(firestore, "users", credential.user.uid), profile);
+        await setDoc(doc(firestore, "profiles", credential.user.uid), profile);
         setProfile(profile);
         return { error: null };
       } catch (error) {
@@ -220,13 +220,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (!firestore) return { error: FIREBASE_MISSING_MESSAGE };
       try {
-        const update = { ...patch, updated_at: new Date().toISOString() };
-        await setDoc(doc(firestore, "users", user.uid), update, {
+        const update = { ...patch, updatedAt: new Date().toISOString() };
+        await setDoc(doc(firestore, "profiles", user.uid), update, {
           merge: true,
         });
-        if (patch.full_name !== undefined) {
+        if (patch.fullName !== undefined) {
           await updateFirebaseProfile(user, {
-            displayName: patch.full_name ?? "",
+            displayName: patch.fullName ?? "",
           });
         }
         await loadProfile(user.uid, user.displayName);

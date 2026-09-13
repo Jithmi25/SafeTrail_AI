@@ -11,7 +11,8 @@ import {
 import { useAuth } from "@/context/AuthContext";
 import { EMERGENCY_NUMBERS } from "@/data/sriLankaData";
 import { ALLERGENS, DIET_OPTIONS } from "@/lib/aiEngine";
-import type { EmergencyContact } from "@/lib/types";
+import { loadSosHistory } from "@/lib/sosIncidents";
+import type { EmergencyContact, SosIncident } from "@/lib/types";
 import {
   AlertTriangle,
   Bell,
@@ -59,6 +60,14 @@ export function ProfileScreen() {
   const [showDiet, setShowDiet] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [sosHistory, setSosHistory] = useState<SosIncident[]>([]);
+
+  useEffect(() => {
+    if (!user) return;
+    loadSosHistory(user.uid)
+      .then(setSosHistory)
+      .catch((error) => console.error("SOS history load error", error));
+  }, [user]);
 
   async function save(patch: any) {
     setBusy(true);
@@ -114,27 +123,27 @@ export function ProfileScreen() {
       <Card className="mb-4">
         <div className="flex items-center gap-3">
           <div className="h-14 w-14 rounded-2xl bg-brand-100 flex items-center justify-center text-brand-700 font-bold text-lg overflow-hidden">
-            {profile?.avatar_url ? (
+            {profile?.avatarUrl ? (
               <img
-                src={profile.avatar_url}
+                src={profile.avatarUrl}
                 alt=""
                 className="h-full w-full object-cover"
               />
             ) : (
-              (profile?.full_name || user?.email || "U").charAt(0).toUpperCase()
+              (profile?.fullName || user?.email || "U").charAt(0).toUpperCase()
             )}
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-bold text-slate-900 truncate">
-              {profile?.full_name || "Traveler"}
+              {profile?.fullName || "Traveler"}
             </p>
             <p className="text-sm muted truncate">{user?.email}</p>
             <div className="flex items-center gap-1.5 mt-1">
               <Chip color="green">
                 <Check size={10} /> Verified
               </Chip>
-              {profile?.country_of_origin && (
-                <Chip color="blue">{profile.country_of_origin}</Chip>
+              {profile?.countryOfOrigin && (
+                <Chip color="blue">{profile.countryOfOrigin}</Chip>
               )}
             </div>
           </div>
@@ -149,6 +158,40 @@ export function ProfileScreen() {
         </Button>
       </Card>
 
+      <Card className="mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Bell size={18} className="text-danger-600" />
+            <p className="font-semibold">SOS history</p>
+          </div>
+          <span className="text-xs muted">Last 50</span>
+        </div>
+        {sosHistory.length === 0 ? (
+          <p className="text-sm muted">No SOS incidents recorded.</p>
+        ) : (
+          <div className="space-y-2">
+            {sosHistory.slice(0, 5).map((incident) => (
+              <div
+                key={incident.id}
+                className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2.5"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium capitalize">
+                    {incident.status}
+                  </p>
+                  <p className="text-xs muted truncate">
+                    {incident.locationLabel ?? "Location unavailable"}
+                  </p>
+                </div>
+                <time className="text-xs muted shrink-0">
+                  {new Date(incident.createdAt).toLocaleDateString()}
+                </time>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
       {/* Emergency contacts */}
       <Card className="mb-4">
         <div className="flex items-center justify-between mb-3">
@@ -157,16 +200,16 @@ export function ProfileScreen() {
             <p className="font-semibold">Emergency contacts</p>
           </div>
           <span className="text-xs muted">
-            {profile?.emergency_contacts?.length ?? 0} saved
+            {profile?.emergencyContacts?.length ?? 0} saved
           </span>
         </div>
-        {(profile?.emergency_contacts?.length ?? 0) === 0 ? (
+        {(profile?.emergencyContacts?.length ?? 0) === 0 ? (
           <p className="text-sm muted mb-3">
             No contacts yet. Add people to alert during an SOS.
           </p>
         ) : (
           <div className="space-y-2 mb-3">
-            {profile?.emergency_contacts?.map((c) => (
+            {profile?.emergencyContacts?.map((c) => (
               <div
                 key={c.id}
                 className="flex items-center gap-3 bg-slate-50 rounded-xl p-3"
@@ -198,12 +241,12 @@ export function ProfileScreen() {
           <p className="font-semibold">Diet & allergens</p>
         </div>
         <div className="flex flex-wrap gap-1.5 mb-3">
-          {(profile?.dietary_restrictions?.length ?? 0) === 0 &&
+          {(profile?.dietaryRestrictions?.length ?? 0) === 0 &&
           (profile?.allergies?.length ?? 0) === 0 ? (
             <p className="text-sm muted">No restrictions configured.</p>
           ) : (
             <>
-              {(profile?.dietary_restrictions ?? []).map((d) => (
+              {(profile?.dietaryRestrictions ?? []).map((d) => (
                 <Chip key={d} color="green">
                   <Leaf size={11} /> {d}
                 </Chip>
@@ -228,11 +271,11 @@ export function ProfileScreen() {
           <p className="font-semibold">Language preference</p>
         </div>
         <Select
-          value={profile?.language_preference ?? "en"}
+          value={profile?.languagePreference ?? "en"}
           onChange={async (e) => {
             setActionError(null);
             const result = await updateProfile({
-              language_preference: e.target.value,
+              languagePreference: e.target.value,
             });
             if (result.error) setActionError(result.error);
           }}
@@ -312,13 +355,13 @@ function EditProfileModal({
   onSave: (patch: any) => void;
 }) {
   const { profile } = useAuth();
-  const [name, setName] = useState(profile?.full_name ?? "");
-  const [country, setCountry] = useState(profile?.country_of_origin ?? "");
+  const [name, setName] = useState(profile?.fullName ?? "");
+  const [country, setCountry] = useState(profile?.countryOfOrigin ?? "");
 
   useEffect(() => {
     if (open) {
-      setName(profile?.full_name ?? "");
-      setCountry(profile?.country_of_origin ?? "");
+      setName(profile?.fullName ?? "");
+      setCountry(profile?.countryOfOrigin ?? "");
     }
   }, [open, profile]);
 
@@ -345,9 +388,7 @@ function EditProfileModal({
         </Select>
         <Button
           full
-          onClick={() =>
-            onSave({ full_name: name, country_of_origin: country })
-          }
+          onClick={() => onSave({ fullName: name, countryOfOrigin: country })}
           disabled={busy}
         >
           {busy ? (
@@ -372,7 +413,7 @@ function ContactsModal({
 }) {
   const { profile, updateProfile } = useAuth();
   const [contacts, setContacts] = useState<EmergencyContact[]>(
-    profile?.emergency_contacts ?? [],
+    profile?.emergencyContacts ?? [],
   );
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -381,7 +422,7 @@ function ContactsModal({
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open) setContacts(profile?.emergency_contacts ?? []);
+    if (open) setContacts(profile?.emergencyContacts ?? []);
   }, [open, profile]);
 
   function add() {
@@ -402,7 +443,7 @@ function ContactsModal({
   async function save() {
     setSaving(true);
     setError(null);
-    const result = await updateProfile({ emergency_contacts: contacts });
+    const result = await updateProfile({ emergencyContacts: contacts });
     setSaving(false);
     if (result.error) setError(result.error);
     else onClose();
@@ -495,7 +536,7 @@ function DietModal({ open, onClose }: { open: boolean; onClose: () => void }) {
     profile?.allergies ?? [],
   );
   const [diet, setDiet] = useState<string[]>(
-    profile?.dietary_restrictions ?? [],
+    profile?.dietaryRestrictions ?? [],
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -503,7 +544,7 @@ function DietModal({ open, onClose }: { open: boolean; onClose: () => void }) {
   useEffect(() => {
     if (open) {
       setAllergens(profile?.allergies ?? []);
-      setDiet(profile?.dietary_restrictions ?? []);
+      setDiet(profile?.dietaryRestrictions ?? []);
     }
   }, [open, profile]);
 
@@ -518,7 +559,7 @@ function DietModal({ open, onClose }: { open: boolean; onClose: () => void }) {
     setError(null);
     const result = await updateProfile({
       allergies: allergens,
-      dietary_restrictions: diet,
+      dietaryRestrictions: diet,
     });
     setSaving(false);
     if (result.error) setError(result.error);
