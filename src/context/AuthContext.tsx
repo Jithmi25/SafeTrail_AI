@@ -2,6 +2,7 @@ import {
   FIREBASE_MISSING_MESSAGE,
   firebaseAuth,
   firestore,
+  getFirebaseAuthErrorMessage,
   IS_FIREBASE_CONFIGURED,
 } from "@/lib/firebase";
 import type { EmergencyContact, Profile } from "@/lib/types";
@@ -159,7 +160,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: null };
       } catch (error) {
         return {
-          error: error instanceof Error ? error.message : "Unable to sign in",
+          error: getFirebaseAuthErrorMessage(error),
         };
       }
     },
@@ -183,8 +184,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { error: null };
       } catch (error) {
         return {
-          error:
-            error instanceof Error ? error.message : "Unable to create account",
+          error: getFirebaseAuthErrorMessage(error),
         };
       }
     },
@@ -198,10 +198,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return { error: null };
     } catch (error) {
       return {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to sign in with Google",
+        error: getFirebaseAuthErrorMessage(error),
       };
     }
   }, []);
