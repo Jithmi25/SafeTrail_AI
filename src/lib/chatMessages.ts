@@ -32,11 +32,13 @@ export async function loadChatMessages(userId: string) {
   if (!firestore || !userId) return [];
   const messagesQuery = query(
     collection(firestore, "profiles", userId, "chatMessages"),
-    orderBy("createdAt", "asc"),
+    orderBy("createdAt", "desc"),
     limit(50),
   );
   const snapshot = await getDocs(messagesQuery);
-  return snapshot.docs.map((message) => mapMessage(message.id, message.data()));
+  return snapshot.docs
+    .map((message) => mapMessage(message.id, message.data()))
+    .reverse();
 }
 
 export async function createChatMessage(input: {
@@ -46,6 +48,9 @@ export async function createChatMessage(input: {
   context?: string;
 }) {
   if (!firestore) throw new Error("Firebase is not configured");
+  if (!input.userId)
+    throw new Error("You must be signed in to save chat messages");
+  if (!input.content.trim()) throw new Error("Chat messages cannot be empty");
   const message = await addDoc(
     collection(firestore, "profiles", input.userId, "chatMessages"),
     {

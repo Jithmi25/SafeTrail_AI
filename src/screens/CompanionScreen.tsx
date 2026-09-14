@@ -98,17 +98,38 @@ function ChatCompanion() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [listening, setListening] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!user) {
+      setMessages([]);
+      setLoading(false);
+      return;
+    }
+
+    let active = true;
     (async () => {
       try {
-        setMessages(await loadChatMessages(user?.uid ?? ""));
+        const history = await loadChatMessages(user.uid);
+        if (active) setMessages(history);
+      } catch (error) {
+        if (active) {
+          setChatError(
+            error instanceof Error
+              ? error.message
+              : "Unable to load chat history",
+          );
+        }
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     })();
-  }, []);
+
+    return () => {
+      active = false;
+    };
+  }, [user]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({
@@ -120,6 +141,7 @@ function ChatCompanion() {
   async function send(text: string) {
     if (!text.trim() || !user) return;
     setSending(true);
+    setChatError(null);
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
       userId: user.uid,
@@ -131,32 +153,39 @@ function ChatCompanion() {
     setMessages((m) => [...m, userMsg]);
     setInput("");
 
-    await createChatMessage({
-      userId: user.uid,
-      role: "user",
-      content: text,
-      context: "companion",
-    });
+    try {
+      await createChatMessage({
+        userId: user.uid,
+        role: "user",
+        content: text,
+        context: "companion",
+      });
 
-    const reply = generateReply(text);
-    const aiMsg: ChatMessage = {
-      id: crypto.randomUUID(),
-      userId: user.uid,
-      role: "assistant",
-      content: reply,
-      context: "companion",
-      createdAt: new Date().toISOString(),
-    };
-    setTimeout(async () => {
-      setMessages((m) => [...m, aiMsg]);
-      setSending(false);
+      // Keep the MVP reply local. A production AI provider must be called through a server-side function.
+      const reply = generateReply(text);
+      const aiMsg: ChatMessage = {
+        id: crypto.randomUUID(),
+        userId: user.uid,
+        role: "assistant",
+        content: reply,
+        context: "companion",
+        createdAt: new Date().toISOString(),
+      };
       await createChatMessage({
         userId: user.uid,
         role: "assistant",
         content: reply,
         context: "companion",
       });
-    }, 700);
+      setMessages((m) => [...m, aiMsg]);
+      setSending(false);
+    } catch (error) {
+      setMessages((m) => m.filter((message) => message.id !== userMsg.id));
+      setChatError(
+        error instanceof Error ? error.message : "Unable to save chat message",
+      );
+      setSending(false);
+    }
   }
 
   function handleMic() {
@@ -187,6 +216,11 @@ function ChatCompanion() {
         ref={scrollRef}
         className="flex-1 overflow-y-auto no-scrollbar space-y-3 pb-3"
       >
+        {chatError && (
+          <p className="rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger-700">
+            {chatError}
+          </p>
+        )}
         {loading ? (
           <div className="flex justify-center py-10">
             <Spinner />
