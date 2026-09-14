@@ -49,7 +49,6 @@ Sri Lanka is a breathtaking destination, but foreign travelers face real risks: 
 | **Sensor Input**       | Browser APIs (Geolocation, Speech, Motion)  | DeviceMotion for fall detection, SpeechRecognition for voice    |
 | **Deployment**         | Static build (Vite)                         | `npm run build` → `dist/` folder, deployable to any static host |
 
-> ⚠️ **Stack Adaptation Note:** The original proposal specified React Native (Expo) + Firebase + Node.js/Express + Google Maps API. Due to the build environment running Vite + React + Supabase, the app was delivered as a **web app** with Supabase replacing Firebase. All AI/ML, maps, and translation layers are simulated with realistic logic and structured for easy API swapping. See [Notes for Judges](#-notes-for-judges).
 
 ---
 
@@ -57,54 +56,54 @@ Sri Lanka is a breathtaking destination, but foreign travelers face real risks: 
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                        PRESENTATION LAYER                        │
-│                                                                  │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐│
-│  │ Map      │ │ Scams &  │ │Companion │ │  Food    │ │Profile ││
-│  │ Screen   │ │ Fare     │ │ (Chat +  │ │ Safety   │ │& SOS   ││
-│  │          │ │ Screen   │ │Translate)│ │ Screen   │ │        ││
-│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └───┬────┘│
-│       │            │            │            │            │      │
-│       └────────────┴────────────┴────────────┴────────────┘      │
-│                              │                                   │
-│              ┌───────────────┴───────────────┐                   │
-│              │     Shared UI Components      │                   │
-│              │  (Button, Card, Modal, Chip,  │                   │
-│              │   Input, Select, Spinner)     │                   │
-│              └───────────────┬───────────────┘                   │
-└──────────────────────────────┼───────────────────────────────────┘
+│                        PRESENTATION LAYER                       │
+│                                                                 │
+│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌────────┐ │
+│  │ Map      │ │ Scams &  │ │Companion │ │  Food    │ │Profile │ │
+│  │ Screen   │ │ Fare     │ │ (Chat +  │ │ Safety   │ │& SOS   │ │
+│  │          │ │ Screen   │ │Translate)│ │ Screen   │ │        │ │
+│  └────┬─────┘ └────┬─────┘ └────┬─────┘ └────┬─────┘ └───┬────┘ │
+│       │            │            │            │            │     │
+│       └────────────┴────────────┴────────────┴────────────┘     │
+│                              │                                  │
+│              ┌───────────────┴───────────────┐                  │
+│              │     Shared UI Components      │                  │
+│              │  (Button, Card, Modal, Chip,  │                  │
+│              │   Input, Select, Spinner)     │                  │
+│              └───────────────┬───────────────┘                  │
+└──────────────────────────────┼──────────────────────────────────┘
                                │
 ┌──────────────────────────────┼───────────────────────────────────┐
 │                       LOGIC / ENGINE LAYER                       │
 │                              │                                   │
-│  ┌─────────────┐ ┌───────────┴───┐ ┌──────────┐ ┌─────────────┐ │
-│  │ AI Engine   │ │ Translation   │ │Companion │ │ Safety Lib  │ │
-│  │ (OCR,       │ │ Engine        │ │ Chatbot  │ │ (Fare,      │ │
-│  │  allergens, │ │ (Si/Ta/En)    │ │ Engine   │ │  deviation, │ │
-│  │  tickets)   │ │               │ │          │ │  fall det.) │ │
-│  └─────┬───────┘ └───────┬───────┘ └────┬─────┘ └──────┬──────┘ │
-│        │                 │              │              │        │
-│  ┌─────┴─────────────────┴──────────────┴──────────────┴──────┐ │
-│  │              Mock Data Layer (Sri Lanka dataset)            │ │
-│  │   Scam DB · Map zones/markers · Phrases · Providers · Fares│ │
-│  └─────────────────────────────────────────────────────────────┘ │
+│  ┌─────────────┐ ┌───────────┴───┐ ┌──────────┐ ┌─────────────┐  │
+│  │ AI Engine   │ │ Translation   │ │Companion │ │ Safety Lib  │  │
+│  │ (OCR,       │ │ Engine        │ │ Chatbot  │ │ (Fare,      │  │
+│  │  allergens, │ │ (Si/Ta/En)    │ │ Engine   │ │  deviation, │  │
+│  │  tickets)   │ │               │ │          │ │  fall det.) │  │
+│  └─────┬───────┘ └───────┬───────┘ └────┬─────┘ └──────┬──────┘  │
+│        │                 │              │              │         │
+│  ┌─────┴─────────────────┴──────────────┴──────────────┴──────┐  │
+│  │              Mock Data Layer (Sri Lanka dataset)           │  │
+│  │   Scam DB · Map zones/markers · Phrases · Providers · Fares│  │
+│  └────────────────────────────────────────────────────────────┘  │
 └──────────────────────────────┬───────────────────────────────────┘
                                │
 ┌──────────────────────────────┼───────────────────────────────────┐
 │                     DATA / PERSISTENCE LAYER                     │
 │                              │                                   │
-│  ┌───────────────────────────┴─────────────────────────────────┐│
-│  │                    Supabase (PostgreSQL)                     ││
-│  │                                                              ││
-│  │  ┌─────────┐ ┌──────────────┐ ┌───────────┐ ┌────────────┐ ││
-│  │  │profiles │ │safety_reports│ │sos_incident│ │chat_message│ ││
-│  │  │         │ │              │ │   s        │ │    s       │ ││
-│  │  └─────────┘ └──────────────┘ └───────────┘ └────────────┘ ││
-│  │                                                              ││
-│  │  Row-Level Security (RLS) on every table                    ││
-│  │  Owner-scoped CRUD · Auth.uid() ownership checks            ││
-│  └──────────────────────────────────────────────────────────────┘│
-└───────────────────────────────────────────────────────────────────┘
+│  ┌───────────────────────────┴─────────────────────────────────┐ │
+│  │                    Supabase (PostgreSQL)                    │ │
+│  │                                                             │ │
+│  │  ┌─────────┐ ┌──────────────┐ ┌───────────┐ ┌────────────┐  │ │
+│  │  │profiles │ │safety_reports│ │    sos    │ │    chat    │  │ │
+│  │  │         │ │              │ │ incidents │ │  messages  │  │ │
+│  │  └─────────┘ └──────────────┘ └───────────┘ └────────────┘  │ │
+│  │                                                             │ │
+│  │  Row-Level Security (RLS) on every table                    │ │
+│  │  Owner-scoped CRUD · Auth.uid() ownership checks            │ │
+│  └─────────────────────────────────────────────────────────────┘ │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
 ### How it flows
@@ -262,7 +261,6 @@ A one-tap SOS that fires immediately is dangerous — pocket presses, accidental
 
 ---
 
-## 📋 Notes for Judges
 
 ### Environment & Setup
 
