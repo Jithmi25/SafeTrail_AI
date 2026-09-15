@@ -42,6 +42,7 @@ export function FoodScreen() {
     analysis: AnalysisResult;
   } | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
 
   const userAllergens = profile?.allergies ?? [];
   const userDiet = profile?.dietaryRestrictions ?? [];
@@ -50,9 +51,17 @@ export function FoodScreen() {
     setSelectedMenu(menuId);
     setScanning(true);
     setMenu(null);
-    const result = await runOcr(menuId);
-    setMenu(result);
-    setScanning(false);
+    setScanError(null);
+    try {
+      const result = await runOcr(menuId);
+      setMenu(result);
+    } catch (error) {
+      setScanError(
+        error instanceof Error ? error.message : "Unable to analyze this menu.",
+      );
+    } finally {
+      setScanning(false);
+    }
   }
 
   const menuOptions = Object.keys(SAMPLE_MENUS).map((k) => ({
@@ -175,6 +184,12 @@ export function FoodScreen() {
           <Spinner size={28} />{" "}
           <span className="ml-3 muted">Analyzing menu…</span>
         </Card>
+      )}
+
+      {scanError && (
+        <p className="mt-4 rounded-lg bg-danger-50 px-3 py-2 text-sm text-danger-700">
+          {scanError}
+        </p>
       )}
 
       {menu && !scanning && (

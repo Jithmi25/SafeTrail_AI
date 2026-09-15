@@ -94,6 +94,28 @@ service cloud.firestore {
         && request.resource.data.status in ['triggered', 'acknowledged', 'resolved', 'cancelled'];
     }
 
+    // Public reference content is read-only from the client. It is seeded by a
+    // trusted deployment/admin process, never by an end-user app session.
+    match /scamEntries/{entryId} {
+      allow read: if signedIn();
+    }
+
+    match /serviceProviders/{providerId} {
+      allow read: if signedIn();
+    }
+
+    match /safetyZones/{zoneId} {
+      allow read: if signedIn();
+    }
+
+    match /mapMarkers/{markerId} {
+      allow read: if signedIn();
+    }
+
+    match /safeRoutes/{routeId} {
+      allow read: if signedIn();
+    }
+
     // Deny every collection that is not explicitly defined above.
     match /{document=**} {
       allow read, write: if false;

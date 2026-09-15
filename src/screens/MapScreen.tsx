@@ -89,13 +89,20 @@ export function MapScreen() {
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
   const [reports, setReports] = useState<SafetyReport[]>([]);
   const [loadingReports, setLoadingReports] = useState(true);
+  const [reportsError, setReportsError] = useState<string | null>(null);
 
   async function loadReports() {
     setLoadingReports(true);
+    setReportsError(null);
     try {
       setReports(await loadSafetyReports());
     } catch (error) {
       console.error("Safety reports load error", error);
+      setReportsError(
+        error instanceof Error
+          ? `Unable to load community reports: ${error.message}`
+          : "Unable to load community reports.",
+      );
     } finally {
       setLoadingReports(false);
     }
@@ -294,6 +301,11 @@ export function MapScreen() {
         {loadingReports && (
           <div className="absolute top-3 right-3 bg-white/90 rounded-lg px-2 py-1 text-xs muted flex items-center gap-1">
             <Spinner size={12} /> Loading reports
+          </div>
+        )}
+        {reportsError && (
+          <div className="absolute left-3 right-3 bottom-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 shadow-card">
+            {reportsError}
           </div>
         )}
       </div>

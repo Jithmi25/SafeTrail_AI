@@ -16,6 +16,7 @@ import {
   VERIFIED_PROVIDERS,
 } from "@/data/sriLankaData";
 import { verifyTicket, type TicketVerification } from "@/lib/aiEngine";
+import { loadReferenceCollection } from "@/lib/referenceData";
 import { calculateFare, type FareEstimate } from "@/lib/safety";
 import {
   AlertTriangle,
@@ -32,7 +33,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 type SubTab = "fare" | "scams" | "ticket" | "providers";
 
@@ -228,8 +229,19 @@ function FareCalculator() {
 function ScamAlerts() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<ScamEntry | null>(null);
+  const [scams, setScams] = useState(SCAM_DATABASE);
+  const [loading, setLoading] = useState(true);
+  const [dataNotice, setDataNotice] = useState<string | null>(null);
 
-  const filtered = SCAM_DATABASE.filter(
+  useEffect(() => {
+    loadReferenceCollection("scamEntries", SCAM_DATABASE).then((result) => {
+      setScams(result.data);
+      setDataNotice(result.error);
+      setLoading(false);
+    });
+  }, []);
+
+  const filtered = scams.filter(
     (s) =>
       s.title.toLowerCase().includes(query.toLowerCase()) ||
       s.description.toLowerCase().includes(query.toLowerCase()) ||
@@ -240,6 +252,12 @@ function ScamAlerts() {
 
   return (
     <div className="space-y-3">
+      {dataNotice && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          {dataNotice}
+        </p>
+      )}
+      {loading && <Spinner className="mx-auto" size={18} />}
       <div className="relative">
         <Search
           className="absolute left-3.5 top-3.5 text-slate-400"
@@ -253,7 +271,7 @@ function ScamAlerts() {
         />
       </div>
 
-      {filtered.length === 0 && (
+      {!loading && filtered.length === 0 && (
         <EmptyState
           icon={<AlertTriangle size={36} />}
           title="No matching scams"
@@ -473,12 +491,30 @@ function ProviderDirectory() {
   const [filter, setFilter] = useState<
     "all" | "tuk_tuk" | "taxi" | "guide" | "tour"
   >("all");
-  const list = VERIFIED_PROVIDERS.filter(
-    (p) => filter === "all" || p.type === filter,
-  );
+  const [providers, setProviders] = useState(VERIFIED_PROVIDERS);
+  const [loading, setLoading] = useState(true);
+  const [dataNotice, setDataNotice] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadReferenceCollection("serviceProviders", VERIFIED_PROVIDERS).then(
+      (result) => {
+        setProviders(result.data);
+        setDataNotice(result.error);
+        setLoading(false);
+      },
+    );
+  }, []);
+
+  const list = providers.filter((p) => filter === "all" || p.type === filter);
 
   return (
     <div className="space-y-3">
+      {dataNotice && (
+        <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          {dataNotice}
+        </p>
+      )}
+      {loading && <Spinner className="mx-auto" size={18} />}
       <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
         {(["all", "tuk_tuk", "taxi", "guide", "tour"] as const).map((f) => (
           <button
@@ -494,6 +530,14 @@ function ProviderDirectory() {
           </button>
         ))}
       </div>
+
+      {!loading && list.length === 0 && (
+        <EmptyState
+          icon={<Users size={36} />}
+          title="No providers found"
+          hint="Try another provider type."
+        />
+      )}
 
       {list.map((p) => (
         <Card key={p.id} pad className="!p-3.5">
