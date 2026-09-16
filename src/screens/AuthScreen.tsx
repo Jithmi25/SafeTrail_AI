@@ -1,3 +1,4 @@
+import { BrandLogo } from "@/components/BrandLogo";
 import { Button, Spinner } from "@/components/ui";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -11,7 +12,6 @@ import {
   Lock,
   Mail,
   MapPin,
-  Shield,
   Sparkles,
   User as UserIcon,
   type LucideIcon,
@@ -68,7 +68,7 @@ export function AuthScreen() {
           <div className="relative">
             <div className="absolute inset-0 bg-white/20 rounded-2xl blur-lg" />
             <div className="relative bg-white/15 backdrop-blur rounded-2xl p-2.5 ring-1 ring-white/30">
-              <Shield className="text-white" size={28} />
+              <BrandLogo className="h-7 w-7 object-contain" />
             </div>
           </div>
           <div>
