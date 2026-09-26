@@ -42,8 +42,8 @@ Sri Lanka is a breathtaking destination, but foreign travelers face real risks: 
 | ---------------------- | ------------------------------------------- | --------------------------------------------------------------- |
 | **Frontend**           | React 18 + TypeScript + Vite                | Mobile-responsive PWA-style web app                             |
 | **Styling**            | Tailwind CSS 3.4 + Lucide Icons             | Custom design system, 6-color ramp, 8px grid                    |
-| **Backend / Database** | Supabase (PostgreSQL)                       | Auth, profiles, safety reports, SOS incidents, chat history     |
-| **Auth**               | Supase Auth + Google OAuth                  | Email/password fallback included                                |
+| **Backend / Database** | Firebase                                    | Auth, profiles, safety reports, SOS incidents, chat history     |
+| **Auth**               | Firebase Auth + Google OAuth                | Email/password fallback included                                |
 | **AI / ML Layer**      | Simulated Gemini / ML Kit / TensorFlow Lite | Rule-based translation, OCR, chatbot, safety analysis engines   |
 | **Maps**               | Custom SVG-based interactive map            | Google Maps API-ready architecture                              |
 | **Sensor Input**       | Browser APIs (Geolocation, Speech, Motion)  | DeviceMotion for fall detection, SpeechRecognition for voice    |
@@ -93,7 +93,7 @@ Sri Lanka is a breathtaking destination, but foreign travelers face real risks: 
 │                     DATA / PERSISTENCE LAYER                     │
 │                              │                                   │
 │  ┌───────────────────────────┴─────────────────────────────────┐ │
-│  │                    Supabase (PostgreSQL)                    │ │
+│  │                       Firebase                              │ │
 │  │                                                             │ │
 │  │  ┌─────────┐ ┌──────────────┐ ┌───────────┐ ┌────────────┐  │ │
 │  │  │profiles │ │safety_reports│ │    sos    │ │    chat    │  │ │
@@ -211,7 +211,7 @@ A one-tap SOS that fires immediately is dangerous — pocket presses, accidental
 
 | Feature                                                                               | Notes                                                          |
 | ------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| 🔐 Google OAuth + email/password auth                                                 | Supabase Auth with Google provider + email/password fallback   |
+| 🔐 Google OAuth + email/password auth                                                 | Firebase Auth with Google provider + email/password fallback   |
 | 👤 User profiles with country, language, emergency contacts, dietary rules, allergens | Full CRUD via Supabase `profiles` table                        |
 | 🗺️ Interactive safety map with heatmap zones                                          | Custom SVG, 12 safety zones, toggleable layers                 |
 | 📍 Scam hotspots & essential service markers                                          | 15 markers across 5 types with detail modals                   |
@@ -249,15 +249,6 @@ A one-tap SOS that fires immediately is dangerous — pocket presses, accidental
 | 🌲 Node.js / Express server           | Supabase Edge Functions + client-side logic cover the orchestration needs; a separate Express server would add complexity without benefit in this environment |
 | 📧 Real Twilio SMS / email alerts     | Requires paid API keys and server-side secrets; simulated with a clear demo-mode notice                                                                       |
 | 🗺️ Google Maps JavaScript API         | No API key available; custom SVG map delivers the same UX and is structured for a seamless swap                                                               |
-
-### Deliberate Deviations
-
-| Change                                           | Reason                                                                                                                                       |
-| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| **React Native (Expo) → React (Vite)**           | Build environment runs Vite + React, not Expo. Delivered as a mobile-responsive web app instead. All UI is touch-optimized and responsive.   |
-| **Firebase → Supabase**                          | Supabase is the provisioned backend in this environment. Provides auth, database, RLS, and edge functions — feature-equivalent for this app. |
-| **Added: fake ticket verifier**                  | Not in the original module list but directly serves the "Scam Detection" module's goal. Uses a structured 6-field authenticity check.        |
-| **Added: verified transport provider directory** | Complements the fare calculator — knowing the fair price is only useful if you also know who to call.                                        |
 
 ---
 
